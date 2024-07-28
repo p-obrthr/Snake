@@ -1,17 +1,18 @@
 class Board {
+    app;
     canvas;
     ctx;
     static CELL_SIZE: number;
     static BOARD_SIZE = 32;
 
     constructor(canvasId: string) {
-        this.canvas = document.getElementById(canvasId) as HTMLCanvasElement;
-        if (!this.canvas) throw new Error(`cavas err with id ${canvasId} not found`);
+        this.app = document.getElementById(canvasId); 
 
+        this.canvas = this.app as HTMLCanvasElement;
+        if (!this.canvas) throw new Error(`cavas err with id ${canvasId} not found`);
         this.canvas.width = 800;
         this.canvas.height = this.canvas.width;
         Board.CELL_SIZE = this.canvas.width / Board.BOARD_SIZE;
-
         this.ctx = this.canvas.getContext("2d") as CanvasRenderingContext2D;
         if (!this.ctx) throw new Error('could not initialize 2D context');
         
@@ -29,65 +30,84 @@ class Board {
     }
 }
 
-class Snake {
-    x: number;
-    y: number;
+class GameObject {
     board;
-    body;
+    x;
+    y;
+    color;
+
+    constructor(board: Board, color: string) {
+        this.board = board
+        this.x = Math.floor(Math.random() * Board.BOARD_SIZE) * Board.CELL_SIZE;
+        this.y = Math.floor(Math.random() * Board.BOARD_SIZE) * Board.CELL_SIZE;
+        this.color = color;
+        this.init()
+    }
+
+    init() {
+        this.draw();
+    }
+
+    draw() {
+        this.board.draw(this.x, this.y, this.color);
+    }
+}
+
+class Snake extends GameObject{
+    body: { x: number, y: number}[] = [];
     direction;
 
     constructor(board: Board) {
-        this.board = board;
-        this.body = [];
-        this.direction = 38; 
-        this.x = Math.floor(Math.random() * Board.BOARD_SIZE) * Board.CELL_SIZE;
-        this.y = Math.floor(Math.random() * Board.BOARD_SIZE) * Board.CELL_SIZE;
+        super(board, 'green')
         this.body.push({ x: this.x, y: this.y });
-        this.board.draw(this.x, this.y, 'green');
+        this.direction = 0; 
     }
 
     setDirection(newDirection: number) {
+        if(this.body.length > 1 && Math.abs(newDirection - this.direction) === 2) 
+            return;
         this.direction = newDirection;
     }
 
     move() {
-        const [dx, dy] = Game.keys[this.direction];
+        const directionKey = Game.keys[this.direction];
+        if (!directionKey) return false;
+
+        const [dx, dy] = directionKey;
         this.x += dx * Board.CELL_SIZE;
         this.y += dy * Board.CELL_SIZE;
 
-        if (this.isCollision()) {
-            return false;
-        }
+        if (this.checkCollision()) return false;
 
-        this.board.draw(this.x, this.y, 'green');
+        this.draw();
         this.body.unshift({ x: this.x, y: this.y });
 
         return true;
     }
 
-    isCollision() {
+    checkCollision() {
         return (
-            this.x < 0 || this.y < 0 ||
-            this.x >= this.board.canvas.width || this.y >= this.board.canvas.height
+            // collision with wall
+            this.x < 0 || 
+            this.y < 0 ||
+            this.x >= this.board.canvas.width || 
+            this.y >= this.board.canvas.height ||
+            // collision own body
+            this.body.some(pair => pair.x === this.x && pair.y === this.y)
         );
     }
 }
 
-class Apple{
-    x: number = 0;
-    y: number = 0;
-    board;
+class Apple extends GameObject{
 
     constructor(board: Board) {
-        this.board = board;
-        this.spawn();
+        super(board, 'red')
     }
 
     spawn() {
-        console.log('draw apple');
         this.x = Math.floor(Math.random() * Board.BOARD_SIZE) * Board.CELL_SIZE;
         this.y = Math.floor(Math.random() * Board.BOARD_SIZE) * Board.CELL_SIZE;
-        this.board.draw(this.x, this.y, 'red');
+        this.draw();
     }
 
 }
@@ -115,16 +135,20 @@ class Game {
     }
 
     init() {
+        this.board.canvas.focus();
         this.board.canvas.addEventListener('keydown', (e) => {
+
+            if(!(e.keyCode in Game.keys)) return
             this.player.setDirection(e.keyCode);
+            if(!this.isRunning) this.run();
         });
-        this.run();
     }
 
 
     async run() {
+        const startText = document.getElementById('startText');
+        if(startText) startText.innerText = '';
         const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-        await sleep(1000);
         this.isRunning = true;
         while (this.isRunning) {
             if (!this.player.move()) {
