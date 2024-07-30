@@ -6,16 +6,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/p-obrthr/Snake.git"
-  },
   "author": "",
   "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/p-obrthr/Snake/issues"
-  },
-  "homepage": "https://github.com/p-obrthr/Snake#readme",
   "devDependencies": {
     "typescript": "^5.5.4"
   }
